@@ -98,17 +98,16 @@ public class SistemaBatallas implements ObservadorBatalla {
         // un click mientras que la otra acaba de iniciar el combate.. deben estar en el
         // mismo
         // estado.
-        if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
-            throw new BatallaException(
-                    "Solo se pueden ubicar barcos durante la preparación");
-        }
         synchronized (batalla) {
-            // para ubicar el barco, tenemos que conocer el oceanno del jugador
+            if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
+                throw new BatallaException(
+                        "Solo se pueden ubicar barcos durante la preparación");
+            }
+
             Oceano oceano = batalla.getJugadorHumano().getOceano();
-            // aca buscamos la flota que tenga el oceano que tenia el jugador...
             Flota flota = oceano.getFlota();
-            // y a su vez, buscamos el barco que tiene la flota por su indice.
             Barco barco = flota.buscarUnBarcoPorSuIndice(indiceBarco);
+
             oceano.ubicarBarco(barco, fila, columna, horizontal);
             actualizar(new EventoBatalla(lugarBatalla, "BARCO_UBICADO"));
         }
@@ -154,7 +153,9 @@ public class SistemaBatallas implements ObservadorBatalla {
             throw new BatallaException("La batalla indicada no existe");
         }
 
-        batalla.iniciarCombate();
+        synchronized (batalla) {
+            batalla.iniciarCombate();
+        }
     }
 
     public Ronda jugarRonda(
