@@ -189,31 +189,35 @@ public class PresentadorPrepararBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla no existe");
         }
-        //hay que consultar el estado actual para ver si esta en preparacion
-        if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
-            return Commands.create(
-                    new Command("combateIniciado", batalla.getLugar()));
+        // Aplicamos lo que uso el profe para sincronizar, sin esto otra solicitud podría colocar
+        // un barco entre consultas.
+        synchronized (batalla) {
+            // hay que consultar el estado actual para ver si esta en preparacion
+            if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
+                return Commands.create(
+                        new Command("combateIniciado", batalla.getLugar()));
+            }
+            // obtenemos la batalla del jugador humano.
+            Oceano oceano = batalla.getJugadorHumano().getOceano();
+            // cuado tenemos el oceano, podemos acceder a la flota
+            Flota flota = oceano.getFlota();
+            Commands comandos = Commands.create();
+            // Ahora creamos comandos, para lugarBatalla.
+            comandos.add(new Command("lugarBatalla", batalla.getLugar()));
+            comandos.add(inicializarTablero(oceano));
+            comandos.add(barcosPreparacion(flota));
+            Commands dibujarBarcos = mostrarBarcosUbicados(flota);
+            // Aca incorporamos las ordenes del dibujo despues de inicializar el tablero.
+            for (Command comando : dibujarBarcos.getCommands()) {
+                comandos.add(comando);
+            }
+            // aca corroboramos que la flota se haya ubicado
+            Command estadoFlota = new Command(
+                    "flotaUbicada",
+                    flota.estanTodosUbicados());
+            comandos.add(estadoFlota);
+            return comandos;
         }
-        // obtenemos la batalla del jugador humano.
-        Oceano oceano = batalla.getJugadorHumano().getOceano();
-        // cuado tenemos el oceano, podemos acceder a la flota
-        Flota flota = oceano.getFlota();
-        Commands comandos = Commands.create();
-        // Ahora creamos comandos, para lugarBatalla.
-        comandos.add(new Command("lugarBatalla", batalla.getLugar()));
-        comandos.add(inicializarTablero(oceano));
-        comandos.add(barcosPreparacion(flota));
-        Commands dibujarBarcos = mostrarBarcosUbicados(flota);
-        // Aca incorporamos las ordenes del dibujo despues de inicializar el tablero.
-        for (Command comando : dibujarBarcos.getCommands()) {
-            comandos.add(comando);
-        }
-        // aca corroboramos que la flota se haya ubicado
-        Command estadoFlota = new Command(
-                "flotaUbicada",
-                flota.estanTodosUbicados());
-        comandos.add(estadoFlota);
-        return comandos;
     }
 
     @PostMapping("/ubicarEnAguasEnemigas")
