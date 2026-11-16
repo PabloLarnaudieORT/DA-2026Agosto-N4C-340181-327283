@@ -10,9 +10,12 @@ import uy.edu.ort.battleshipdemo.Modelo.Flota;
 import uy.edu.ort.battleshipdemo.Modelo.Barco;
 import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
 import uy.edu.ort.battleshipdemo.Modelo.Ronda;
+import uy.edu.ort.battleshipdemo.Modelo.ConfiguracionBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.Tactica;
 import uy.edu.ort.battleshipdemo.Modelo.Eventos.ObservadorBatalla;
 import uy.edu.ort.battleshipdemo.Modelo.Eventos.EventoBatalla;
-
+import uy.edu.ort.battleshipdemo.Modelo.Jugador.JugadorHumano;
+import uy.edu.ort.battleshipdemo.Modelo.Jugador.JugadorMaquina;
 
 public class SistemaBatallas implements ObservadorBatalla {
 
@@ -101,7 +104,7 @@ public class SistemaBatallas implements ObservadorBatalla {
         actualizar(new EventoBatalla(lugarBatalla, "BARCO_UBICADO"));
     }
 
-    //Esto lo vamos a usar para mostrar estadisticas de la campaña
+    // Esto lo vamos a usar para mostrar estadisticas de la campaña
     public int contarBatallasPorEstado(Batalla.Estados estadoBuscado) {
         int cantidad = 0;
         for (Batalla batalla : batallas) {
@@ -113,105 +116,133 @@ public class SistemaBatallas implements ObservadorBatalla {
         return cantidad;
     }
 
-    public double calcularPorcentajeExito(){
+    public double calcularPorcentajeExito() {
         int batallasTotal = batallas.size();
-        //aca evitamos dividir por cero
-        if(batallasTotal == 0){
+        // aca evitamos dividir por cero
+        if (batallasTotal == 0) {
             return 0.0;
         }
         int ganados = contarBatallasPorEstado(Batalla.Estados.ganada);
         return (100.0 * ganados / batallasTotal);
     }
 
-    public void validarFlotaParaLibrarBatalla(String lugarBatalla) throws BatallaException{
+    public void validarFlotaParaLibrarBatalla(String lugarBatalla) throws BatallaException {
         Batalla batalla = buscarBatalla(lugarBatalla);
-        if(batalla == null){
+        if (batalla == null) {
             throw new BatallaException("La batalla ingresada no existe");
         }
         Oceano oceano = batalla.getJugadorHumano().getOceano();
-        if(!oceano.estanTodosUbicados()){
+        if (!oceano.estanTodosUbicados()) {
             throw new BatallaException("Debe posicionar todos sus barcos primero");
         }
     }
 
-
-
-
-
     public void iniciarCombate(String lugarBatalla) throws BatallaException {
-    Batalla batalla = buscarBatalla(lugarBatalla);
+        Batalla batalla = buscarBatalla(lugarBatalla);
 
-    if (batalla == null) {
-        throw new BatallaException("La batalla indicada no existe");
+        if (batalla == null) {
+            throw new BatallaException("La batalla indicada no existe");
+        }
+
+        batalla.iniciarCombate();
     }
 
-    batalla.iniciarCombate();
-}
+    public Ronda jugarRonda(
+            String lugarBatalla, int fila, int columna, int numeroRondaEsperada)
+            throws BatallaException {
 
-public Ronda jugarRonda(
-        String lugarBatalla, int fila, int columna, int numeroRondaEsperada)
-        throws BatallaException {
+        Batalla batalla = buscarBatalla(lugarBatalla);
 
-    Batalla batalla = buscarBatalla(lugarBatalla);
+        if (batalla == null) {
+            throw new BatallaException("La batalla indicada no existe");
+        }
 
-    if (batalla == null) {
-        throw new BatallaException("La batalla indicada no existe");
+        return batalla.jugarRonda(fila, columna, numeroRondaEsperada);
     }
 
-    return batalla.jugarRonda(fila, columna, numeroRondaEsperada);
-}
+    public void agregarObservador(
+            String lugarBatalla, ObservadorBatalla observador)
+            throws BatallaException {
 
-public void agregarObservador(
-        String lugarBatalla, ObservadorBatalla observador)
-        throws BatallaException {
+        Batalla batalla = buscarBatalla(lugarBatalla);
 
-    Batalla batalla = buscarBatalla(lugarBatalla);
+        if (batalla == null) {
+            throw new BatallaException("La batalla indicada no existe");
+        }
 
-    if (batalla == null) {
-        throw new BatallaException("La batalla indicada no existe");
-    }
-
-    if (!observadores.contains(observador)) {
-    observadores.add(observador);
-}
-}
-
-public void agregarObservadorSala(ObservadorBatalla observador) {
-    if (!observadores.contains(observador)) {
-        observadores.add(observador);
-    }
-}
-
-public void quitarObservadorSala(ObservadorBatalla observador) {
-    observadores.remove(observador);
-}
-
-public void quitarObservador(
-        String lugarBatalla, ObservadorBatalla observador)
-        throws BatallaException {
-
-    Batalla batalla = buscarBatalla(lugarBatalla);
-
-    if (batalla == null) {
-        throw new BatallaException("La batalla indicada no existe");
-    }
-
-observadores.remove(observador);
-}
-
-
-@Override
-public void actualizar(EventoBatalla evento) {
-    List<ObservadorBatalla> copiaObservadores = new ArrayList<>(observadores);
-
-    for (ObservadorBatalla observador : copiaObservadores) {
-        try {
-            observador.actualizar(evento);
-        } catch (RuntimeException error) {
-            // Una conexión fallida no debe interrumpir el aviso a las demás.
-            observadores.remove(observador);
+        if (!observadores.contains(observador)) {
+            observadores.add(observador);
         }
     }
-}
+
+    public void agregarObservadorSala(ObservadorBatalla observador) {
+        if (!observadores.contains(observador)) {
+            observadores.add(observador);
+        }
+    }
+
+    public void quitarObservadorSala(ObservadorBatalla observador) {
+        observadores.remove(observador);
+    }
+
+    public void quitarObservador(
+            String lugarBatalla, ObservadorBatalla observador)
+            throws BatallaException {
+
+        Batalla batalla = buscarBatalla(lugarBatalla);
+
+        if (batalla == null) {
+            throw new BatallaException("La batalla indicada no existe");
+        }
+
+        observadores.remove(observador);
+    }
+
+    @Override
+    public void actualizar(EventoBatalla evento) {
+        List<ObservadorBatalla> copiaObservadores = new ArrayList<>(observadores);
+
+        for (ObservadorBatalla observador : copiaObservadores) {
+            try {
+                observador.actualizar(evento);
+            } catch (RuntimeException error) {
+                // Una conexión fallida no debe interrumpir el aviso a las demás.
+                observadores.remove(observador);
+            }
+        }
+    }
+
+    public Batalla crearBatalla(
+            String lugar, ConfiguracionBatalla configuracion, Tactica tactica) throws BatallaException {
+
+        //Empezamos con las validaciones!
+        if (configuracion == null) {
+            throw new BatallaException("La configuración es obligatoria");
+        }
+
+        configuracion.validar();
+
+        if (tactica == null) {
+            throw new BatallaException("Debe seleccionar una táctica");
+        }
+        //creamos una batalla usando el constructor vacio de la batalla
+        Batalla batalla = new Batalla();
+        //le colocamos el lugar recibido desde los parametros.
+        batalla.setLugar(lugar);
+        //y lo mismo vamos a hacer con la configuracion aca.
+        batalla.setConfiguracion(configuracion);
+        //Aca estamos creando el jugador humano
+        JugadorHumano humano = new JugadorHumano("Jugador humano");
+        humano.setOceano(configuracion.crearOceano());
+        batalla.setJugadorHumano(humano);
+        //luego el jugador maquina
+        JugadorMaquina maquina = new JugadorMaquina("Máquina", tactica);
+        maquina.setOceano(configuracion.crearOceano());
+        batalla.setJugadorMaquina(maquina);
+
+        agregarBatalla(batalla);
+        
+        return batalla;
+    }
 
 }
