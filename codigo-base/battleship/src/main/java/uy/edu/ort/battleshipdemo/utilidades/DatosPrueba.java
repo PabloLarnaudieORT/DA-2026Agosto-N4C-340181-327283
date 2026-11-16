@@ -55,18 +55,9 @@ public class DatosPrueba {
                 ConfiguracionBatalla configuracion = crearConfiguracion(8, 8, detalles);
                 configuracion.validar();
 
-                JugadorHumano humano = new JugadorHumano("Humano de prueba");
-                humano.setOceano(configuracion.crearOceano());
-                JugadorMaquina maquina = new JugadorMaquina("Máquina de prueba", new TacticaSecuencial());
-                maquina.setOceano(configuracion.crearOceano());
-
-                Batalla batalla = new Batalla();
-                batalla.setLugar("PRUEBA");
-                batalla.setConfiguracion(configuracion);
-                batalla.setJugadorHumano(humano);
-                batalla.setJugadorMaquina(maquina);
-                // El constructor de Batalla ya establece EstadoEnPreparacion.
-                fachada.agregarBatalla(batalla);
+                // Usa el mismo flujo de creación que el formulario:
+                // humano sin ubicar y máquina desplegada automáticamente.
+                fachada.crearBatalla("PRUEBA", configuracion, new TacticaSecuencial());
         }
 
         // Precarga los ejemplos que pide el CU03: uno en combate, uno ganado y uno perdido.

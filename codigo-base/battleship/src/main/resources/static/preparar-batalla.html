@@ -323,7 +323,10 @@
             mostrarApertura("Preparación abierta: " + lugar + ".");
         });
         view.handler("barcoUbicado", (mensaje) => mostrarUbicacion(mensaje));
-        view.handler("flotaListaParaCombatir", (mensaje) => mostrarUbicacion(mensaje));
+        view.handler("combateIniciado", (lugar) => {
+            window.location.href =
+                "/librar-batalla.html?lugarBatalla=" + encodeURIComponent(lugar);
+        });
         view.handler("batallaCreada", (lugar) => {
             document.getElementById("estadoBarcosPreparacion").textContent =
                 "Batalla creada. Lugar: " + lugar + ". Ubicá tus barcos.";
