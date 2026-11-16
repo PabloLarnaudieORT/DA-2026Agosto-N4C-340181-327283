@@ -80,7 +80,7 @@ public class SistemaBatallas implements ObservadorBatalla {
     }
 
     public Batalla buscarBatalla(String nombreLugar) {
-        synchronized (batalla) {
+        synchronized (batallas) {
             for (Batalla batalla : batallas) {
                 if (batalla.getLugar().equals(nombreLugar)) {
                     return batalla;
