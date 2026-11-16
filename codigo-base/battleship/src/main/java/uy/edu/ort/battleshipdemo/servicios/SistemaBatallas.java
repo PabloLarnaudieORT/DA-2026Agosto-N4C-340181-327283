@@ -76,7 +76,9 @@ public class SistemaBatallas implements ObservadorBatalla {
     }
 
     public List<Batalla> getBatallas() {
-        return batallas;
+        synchronized (batallas) {
+            return new ArrayList<>(batallas);
+        }
     }
 
     public Batalla buscarBatalla(String nombreLugar) {
@@ -120,23 +122,37 @@ public class SistemaBatallas implements ObservadorBatalla {
     // Esto lo vamos a usar para mostrar estadisticas de la campaña
     public int contarBatallasPorEstado(Batalla.Estados estadoBuscado) {
         int cantidad = 0;
-        for (Batalla batalla : batallas) {
-            Batalla.Estados estadoActual = batalla.getEstado().getEstado();
-            if (estadoActual == estadoBuscado) {
-                cantidad++;
+
+        for (Batalla batalla : getBatallas()) {
+            synchronized (batalla) {
+                if (batalla.getEstado().getEstado() == estadoBuscado) {
+                    cantidad++;
+                }
             }
         }
+
         return cantidad;
     }
 
     public double calcularPorcentajeExito() {
-        int batallasTotal = batallas.size();
-        // aca evitamos dividir por cero
-        if (batallasTotal == 0) {
+        List<Batalla> listado = getBatallas();
+        int total = listado.size();
+
+        if (total == 0) {
             return 0.0;
         }
-        int ganados = contarBatallasPorEstado(Batalla.Estados.ganada);
-        return (100.0 * ganados / batallasTotal);
+
+        int ganadas = 0;
+
+        for (Batalla batalla : listado) {
+            synchronized (batalla) {
+                if (batalla.getEstado().getEstado() == Batalla.Estados.ganada) {
+                    ganadas++;
+                }
+            }
+        }
+
+        return 100.0 * ganadas / total;
     }
 
     public void validarFlotaParaLibrarBatalla(String lugarBatalla) throws BatallaException {
