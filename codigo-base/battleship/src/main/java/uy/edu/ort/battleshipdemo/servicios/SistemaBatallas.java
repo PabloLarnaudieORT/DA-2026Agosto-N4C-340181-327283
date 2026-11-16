@@ -239,9 +239,9 @@ public class SistemaBatallas implements ObservadorBatalla {
         JugadorMaquina maquina = new JugadorMaquina("Máquina", tactica);
         maquina.setOceano(configuracion.crearOceano());
         batalla.setJugadorMaquina(maquina);
-
+        //luego agregamos la batalla.
         agregarBatalla(batalla);
-        
+
         return batalla;
     }
 
