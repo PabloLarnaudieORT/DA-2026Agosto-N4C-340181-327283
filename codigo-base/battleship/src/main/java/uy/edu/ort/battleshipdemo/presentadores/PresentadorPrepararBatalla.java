@@ -79,44 +79,6 @@ public class PresentadorPrepararBatalla {
         throw new BatallaException("Seleccioná una táctica de juego válida.");
     }
 
-    private Oceano crearOceanoMaquina(ConfiguracionBatalla configuracion)
-            throws BatallaException {
-        for (int intento = 0; intento < 100; intento++) {
-            Oceano oceano = configuracion.crearOceano();
-            boolean flotaUbicada = true;
-
-            for (Barco barco : oceano.getFlota().getBarcos()) {
-                if (!ubicarBarcoAleatoriamente(oceano, barco)) {
-                    flotaUbicada = false;
-                    break;
-                }
-            }
-
-            if (flotaUbicada) {
-                return oceano;
-            }
-        }
-        throw new BatallaException("No se pudo ubicar la flota de la máquina. Probá otra configuración.");
-    }
-
-    private boolean ubicarBarcoAleatoriamente(Oceano oceano, Barco barco) {
-        int cantidadIntentos = oceano.getFilas() * oceano.getColumnas() * 2;
-
-        for (int intento = 0; intento < cantidadIntentos; intento++) {
-            int fila = azar.nextInt(oceano.getFilas());
-            int columna = azar.nextInt(oceano.getColumnas());
-            boolean horizontal = azar.nextBoolean();
-
-            try {
-                oceano.ubicarBarco(barco, fila, columna, horizontal);
-                return true;
-            } catch (BatallaException error) {
-                // Esa posición no sirve; se prueba otra posición aleatoria.
-            }
-        }
-        return false;
-    }
-
     private ConfiguracionBatalla crearConfiguracion(PrepararBatallaDto datos) throws BatallaException {
         // primero creo una instancia de ConfiguracionBatalla
         ConfiguracionBatalla configuracion = new ConfiguracionBatalla();

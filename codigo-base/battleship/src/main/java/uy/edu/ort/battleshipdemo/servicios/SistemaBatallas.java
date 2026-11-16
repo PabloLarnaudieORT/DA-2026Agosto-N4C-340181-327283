@@ -215,7 +215,7 @@ public class SistemaBatallas implements ObservadorBatalla {
     public Batalla crearBatalla(
             String lugar, ConfiguracionBatalla configuracion, Tactica tactica) throws BatallaException {
 
-        //Empezamos con las validaciones!
+        // Empezamos con las validaciones!
         if (configuracion == null) {
             throw new BatallaException("La configuración es obligatoria");
         }
@@ -225,24 +225,62 @@ public class SistemaBatallas implements ObservadorBatalla {
         if (tactica == null) {
             throw new BatallaException("Debe seleccionar una táctica");
         }
-        //creamos una batalla usando el constructor vacio de la batalla
+        // creamos una batalla usando el constructor vacio de la batalla
         Batalla batalla = new Batalla();
-        //le colocamos el lugar recibido desde los parametros.
+        // le colocamos el lugar recibido desde los parametros.
         batalla.setLugar(lugar);
-        //y lo mismo vamos a hacer con la configuracion aca.
+        // y lo mismo vamos a hacer con la configuracion aca.
         batalla.setConfiguracion(configuracion);
-        //Aca estamos creando el jugador humano
+        // Aca estamos creando el jugador humano
         JugadorHumano humano = new JugadorHumano("Jugador humano");
         humano.setOceano(configuracion.crearOceano());
         batalla.setJugadorHumano(humano);
-        //luego el jugador maquina
+        // luego el jugador maquina
         JugadorMaquina maquina = new JugadorMaquina("Máquina", tactica);
         maquina.setOceano(configuracion.crearOceano());
         batalla.setJugadorMaquina(maquina);
-        //luego agregamos la batalla.
+        // luego agregamos la batalla.
         agregarBatalla(batalla);
 
         return batalla;
+    }
+
+    private Oceano crearOceanoMaquina(ConfiguracionBatalla configuracion)
+            throws BatallaException {
+        for (int intento = 0; intento < 100; intento++) {
+            Oceano oceano = configuracion.crearOceano();
+            boolean flotaUbicada = true;
+
+            for (Barco barco : oceano.getFlota().getBarcos()) {
+                if (!ubicarBarcoAleatoriamente(oceano, barco)) {
+                    flotaUbicada = false;
+                    break;
+                }
+            }
+
+            if (flotaUbicada) {
+                return oceano;
+            }
+        }
+        throw new BatallaException("No se pudo ubicar la flota de la máquina. Probá otra configuración.");
+    }
+
+    private boolean ubicarBarcoAleatoriamente(Oceano oceano, Barco barco) {
+        int cantidadIntentos = oceano.getFilas() * oceano.getColumnas() * 2;
+
+        for (int intento = 0; intento < cantidadIntentos; intento++) {
+            int fila = azar.nextInt(oceano.getFilas());
+            int columna = azar.nextInt(oceano.getColumnas());
+            boolean horizontal = azar.nextBoolean();
+
+            try {
+                oceano.ubicarBarco(barco, fila, columna, horizontal);
+                return true;
+            } catch (BatallaException error) {
+                // Esa posición no sirve; se prueba otra posición aleatoria.
+            }
+        }
+        return false;
     }
 
 }
