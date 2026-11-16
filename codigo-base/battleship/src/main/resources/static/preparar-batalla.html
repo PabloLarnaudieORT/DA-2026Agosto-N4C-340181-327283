@@ -224,6 +224,54 @@
         let indiceSeleccionado = null;
         let barcosDisponibles = [];
 
+        let eventosPreparacion = null;
+        let lugarObservado = "";
+        let actualizacionEnCurso = false;
+        let actualizacionPendiente = false;
+
+        async function actualizarPreparacionCompartida(lugar) {
+            if (lugar !== lugarDePreparacion) return;
+            actualizacionPendiente = true;
+            if (actualizacionEnCurso) return;
+            actualizacionEnCurso = true;
+            try {
+                while (actualizacionPendiente && lugar === lugarDePreparacion) {
+                    actualizacionPendiente = false;
+                    await abrirPreparacion(lugar);
+                }
+            } finally {
+                actualizacionEnCurso = false;
+            }
+        }
+
+        function observarPreparacion(lugar) {
+            if (eventosPreparacion && lugarObservado === lugar) return;
+            if (eventosPreparacion) eventosPreparacion.close();
+            lugarObservado = lugar;
+            const conexion = new EventSource(
+                "/preparacion-batalla/eventos?lugarBatalla=" + encodeURIComponent(lugar)
+            );
+            eventosPreparacion = conexion;
+            const actualizar = () => {
+                if (eventosPreparacion === conexion) {
+                    actualizarPreparacionCompartida(lugar).catch(() => {
+                        mostrarApertura("No se pudo actualizar la preparación compartida.", true);
+                    });
+                }
+            };
+            conexion.addEventListener("actualizacion", actualizar);
+            // Recuperar cambios anteriores a la conexión o durante una desconexión.
+            conexion.addEventListener("open", actualizar);
+        }
+
+        window.addEventListener("pagehide", () => {
+            if (eventosPreparacion) eventosPreparacion.close();
+            eventosPreparacion = null;
+            lugarObservado = "";
+        });
+        window.addEventListener("pageshow", (evento) => {
+            if (evento.persisted && lugarDePreparacion) observarPreparacion(lugarDePreparacion);
+        });
         function actualizarLeyendaUbicacion() {
             const seleccionado = barcosDisponibles.find((barco) => barco.indice === indiceSeleccionado);
             const orientacion = document.getElementById("orientacionBarco").value === "true"
@@ -317,6 +365,7 @@
             }
             document.getElementById("estadoFlota").textContent = "";
             lugarDePreparacion = lugar;
+            observarPreparacion(lugar);
             document.getElementById("lugarPreparacion").textContent = lugar;
             document.getElementById("lugarBatallaExistente").value = lugar;
             mostrarUbicacion("");

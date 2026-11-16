@@ -189,6 +189,11 @@ public class PresentadorPrepararBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla no existe");
         }
+        //hay que consultar el estado actual para ver si esta en preparacion
+        if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
+            return Commands.create(
+                    new Command("combateIniciado", batalla.getLugar()));
+        }
         // obtenemos la batalla del jugador humano.
         Oceano oceano = batalla.getJugadorHumano().getOceano();
         // cuado tenemos el oceano, podemos acceder a la flota
@@ -227,8 +232,47 @@ public class PresentadorPrepararBatalla {
     @GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter eventos(String lugarBatalla) throws BatallaException {
         SseEmitter emisor = new SseEmitter();
+        ObservadorBatalla observador = new ObservadorBatalla() {
+            @Override
+            public void actualizar(EventoBatalla evento) {
+                if (evento.getIdentificadorBatalla().equals(lugarBatalla)) {
+                    try {
+                        emisor.send(
+                                SseEmitter.event()
+                                        .name("actualizacion")
+                                        .data(evento.getTipoCambio()));
+                    } catch (IOException error) {
+                        emisor.completeWithError(error);
+                    }
+                }
+            }
+        };
+        fachada.agregarObservador(lugarBatalla, observador);
+        // Esto que tenemos aca sirve para cuando vence la conexion por tiempo, cerrar
+        // el emisor.
+        // la flechita () -> significa que es una funcion que ocurrira cuando se corra
+        // el evento.
+        emisor.onCompletion(() -> quitarObservador(lugarBatalla, observador));
 
+        emisor.onTimeout(() -> {
+            quitarObservador(lugarBatalla, observador);
+            emisor.complete();
+        });
+
+        emisor.onError(error -> quitarObservador(lugarBatalla, observador));
         return emisor;
+    }
+
+    // este metodo nos permitira retirar la suscripcion cuando termine la conexion
+    // del emisor (SSE)
+    private void quitarObservador(
+            String lugarBatalla, ObservadorBatalla observador) {
+
+        try {
+            fachada.quitarObservador(lugarBatalla, observador);
+        } catch (BatallaException error) {
+            // Si la batalla ya no existe, no hay una suscripción que conservar.
+        }
     }
 
 }

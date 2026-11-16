@@ -94,6 +94,13 @@ public class SistemaBatallas implements ObservadorBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla indicada no existe.");
         }
+        // hay que proteger la accion de ubicar barco, por que una pestaña puede enviar
+        // un click mientras que la otra acaba de iniciar el combate.. deben estar en el mismo
+        // estado.
+        if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
+            throw new BatallaException(
+                    "Solo se pueden ubicar barcos durante la preparación");
+        }
         // para ubicar el barco, tenemos que conocer el oceanno del jugador
         Oceano oceano = batalla.getJugadorHumano().getOceano();
         // aca buscamos la flota que tenga el oceano que tenia el jugador...
