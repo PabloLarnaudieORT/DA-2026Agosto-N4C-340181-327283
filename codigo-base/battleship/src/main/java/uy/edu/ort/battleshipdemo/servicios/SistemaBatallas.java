@@ -160,10 +160,15 @@ public class SistemaBatallas implements ObservadorBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla ingresada no existe");
         }
-        Oceano oceano = batalla.getJugadorHumano().getOceano();
-        if (!oceano.estanTodosUbicados()) {
-            throw new BatallaException("Debe posicionar todos sus barcos primero");
+        synchronized (batalla) {
+            Oceano oceano = batalla.getJugadorHumano().getOceano();
+
+            if (!oceano.estanTodosUbicados()) {
+                throw new BatallaException(
+                        "Debe posicionar todos sus barcos primero");
+            }
         }
+
     }
 
     public void iniciarCombate(String lugarBatalla) throws BatallaException {
@@ -201,19 +206,25 @@ public class SistemaBatallas implements ObservadorBatalla {
             throw new BatallaException("La batalla indicada no existe");
         }
 
-        if (!observadores.contains(observador)) {
-            observadores.add(observador);
+        synchronized (observadores) {
+            if (!observadores.contains(observador)) {
+                observadores.add(observador);
+            }
         }
     }
 
     public void agregarObservadorSala(ObservadorBatalla observador) {
-        if (!observadores.contains(observador)) {
-            observadores.add(observador);
+        synchronized (observadores) {
+            if (!observadores.contains(observador)) {
+                observadores.add(observador);
+            }
         }
     }
 
     public void quitarObservadorSala(ObservadorBatalla observador) {
-        observadores.remove(observador);
+        synchronized (observadores) {
+            observadores.remove(observador);
+        }
     }
 
     public void quitarObservador(
@@ -226,19 +237,26 @@ public class SistemaBatallas implements ObservadorBatalla {
             throw new BatallaException("La batalla indicada no existe");
         }
 
-        observadores.remove(observador);
+        synchronized (observadores) {
+            observadores.remove(observador);
+        }
     }
 
     @Override
     public void actualizar(EventoBatalla evento) {
-        List<ObservadorBatalla> copiaObservadores = new ArrayList<>(observadores);
+        List<ObservadorBatalla> copiaObservadores;
+
+        synchronized (observadores) {
+            copiaObservadores = new ArrayList<>(observadores);
+        }
 
         for (ObservadorBatalla observador : copiaObservadores) {
             try {
                 observador.actualizar(evento);
             } catch (RuntimeException error) {
-                // Una conexión fallida no debe interrumpir el aviso a las demás.
-                observadores.remove(observador);
+                synchronized (observadores) {
+                    observadores.remove(observador);
+                }
             }
         }
     }
