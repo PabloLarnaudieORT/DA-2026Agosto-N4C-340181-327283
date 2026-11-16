@@ -176,27 +176,23 @@ public class PresentadorPrepararBatalla {
         }
         return comandos;
     }
-
+    //Aca estamos conversando con crearBatalla mas que nada, ahi en Fachada tenemos crearBatalla que direcciona con el modelo.
     @PostMapping("/prepararBatalla")
-    public Commands prepararBatalla(PrepararBatallaDto prepararBatallaDto) throws BatallaException {
-        ConfiguracionBatalla configuracionBatalla = crearConfiguracion(prepararBatallaDto);
+    public Commands prepararBatalla(PrepararBatallaDto prepararBatallaDto)
+            throws BatallaException {
+
+        ConfiguracionBatalla configuracion = crearConfiguracion(prepararBatallaDto);
+
         Tactica tactica = crearTactica(prepararBatallaDto.getNombreTactica());
 
-        JugadorHumano jugadorHumano = new JugadorHumano("Jugador humano");
-        jugadorHumano.setOceano(configuracionBatalla.crearOceano());
-
-        JugadorMaquina jugadorMaquina = new JugadorMaquina("Máquina", tactica);
-        jugadorMaquina.setOceano(crearOceanoMaquina(configuracionBatalla));
-
-        Batalla batalla = new Batalla();
-        batalla.setLugar(prepararBatallaDto.getLugarBatalla());
-        batalla.setConfiguracion(configuracionBatalla);
-        batalla.setJugadorHumano(jugadorHumano);
-        batalla.setJugadorMaquina(jugadorMaquina);
-        fachada.agregarBatalla(batalla);
+        Batalla batalla = fachada.crearBatalla(
+                prepararBatallaDto.getLugarBatalla(),
+                configuracion,
+                tactica);
 
         Commands comandos = abrirPreparacion(batalla.getLugar());
         comandos.add(new Command("batallaCreada", batalla.getLugar()));
+
         return comandos;
     }
 
