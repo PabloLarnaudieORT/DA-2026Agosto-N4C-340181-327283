@@ -1,9 +1,13 @@
 package uy.edu.ort.battleshipdemo.presentadores;
 
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.context.annotation.Scope;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.io.IOException;
 import uy.edu.ort.battleshipdemo.Commands;
 import uy.edu.ort.battleshipdemo.Command;
 import uy.edu.ort.battleshipdemo.InicializarDto;
@@ -29,6 +33,8 @@ import uy.edu.ort.battleshipdemo.Modelo.Batalla;
 import uy.edu.ort.battleshipdemo.Modelo.Celda;
 import uy.edu.ort.battleshipdemo.Modelo.Barco;
 import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.EventoBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.ObservadorBatalla;
 
 @RestController
 @RequestMapping("/sala")
@@ -36,6 +42,35 @@ import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
 public class PresentadorSala {
 
     private Fachada fachada = Fachada.getInstancia();
+
+    @GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter eventos() throws BatallaException {
+        SseEmitter emisor = new SseEmitter();
+
+        ObservadorBatalla observador = new ObservadorBatalla() {
+            @Override
+            public void actualizar(EventoBatalla evento) {
+                try {
+                    emisor.send(
+                            SseEmitter.event()
+                                    .name("actualizacion")
+                                    .data(evento.getTipoCambio()));
+                } catch (IOException error) {
+                    emisor.completeWithError(error);
+                }
+            }
+        };
+
+        fachada.agregarObservadorSala(observador);
+        emisor.onCompletion(() -> fachada.quitarObservadorSala(observador));
+        emisor.onTimeout(() -> {
+            fachada.quitarObservadorSala(observador);
+            emisor.complete();
+        });
+        emisor.onError(error -> fachada.quitarObservadorSala(observador));
+
+        return emisor;
+    }
 
     private Command batallas() {
         return new Command(
@@ -55,4 +90,5 @@ public class PresentadorSala {
                 new Command("batallasPerdidas", perdidas),
                 new Command("porcentajeExito", porcentajeExito));
     }
+
 }

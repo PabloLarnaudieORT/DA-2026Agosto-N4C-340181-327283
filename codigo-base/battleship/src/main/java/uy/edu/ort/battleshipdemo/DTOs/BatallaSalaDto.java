@@ -58,15 +58,17 @@ public class BatallaSalaDto {
     }
 
     public BatallaSalaDto(Batalla batalla) {
+    synchronized (batalla) {
         lugar = batalla.getLugar();
         fila = batalla.getConfiguracion().getFilas();
         columna = batalla.getConfiguracion().getColumnas();
         partesSanasPropias = batalla.getJugadorHumano().partesSanas();
         tamañoFlotaPropia = batalla.getJugadorHumano().tamanioFlota();
-        partesSanasEnemigas =  batalla.getJugadorMaquina().partesSanas();
+        partesSanasEnemigas = batalla.getJugadorMaquina().partesSanas();
         tamañoFlotaEnemiga = batalla.getJugadorMaquina().tamanioFlota();
         estado = batalla.getEstado().getNombre();
     }
+}
 
     public BatallaSalaDto(String lugar, int fila, int columna) {
         this.lugar = lugar;

@@ -4,6 +4,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.context.annotation.Scope;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import uy.edu.ort.battleshipdemo.Commands;
 import uy.edu.ort.battleshipdemo.Command;
 import uy.edu.ort.battleshipdemo.InicializarDto;
@@ -11,8 +14,11 @@ import uy.edu.ort.battleshipdemo.ValorDto;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Random;
+import java.io.IOException;
 
 import uy.edu.ort.battleshipdemo.DTOs.TipoBarcoDto;
+import uy.edu.ort.battleshipdemo.DTOs.TacticaDto;
 import uy.edu.ort.battleshipdemo.DTOs.PrepararBatallaDto;
 import uy.edu.ort.battleshipdemo.DTOs.CantidadBarcoDto;
 import uy.edu.ort.battleshipdemo.DTOs.BarcoPreparacionDto;
@@ -26,6 +32,14 @@ import uy.edu.ort.battleshipdemo.Modelo.Oceano;
 import uy.edu.ort.battleshipdemo.Modelo.Batalla;
 import uy.edu.ort.battleshipdemo.Modelo.Celda;
 import uy.edu.ort.battleshipdemo.Modelo.Barco;
+import uy.edu.ort.battleshipdemo.Modelo.Jugador.JugadorHumano;
+import uy.edu.ort.battleshipdemo.Modelo.Jugador.JugadorMaquina;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.Tactica;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaSecuencial;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaEspiral;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaCazaYAtaque;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.EventoBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.ObservadorBatalla;
 import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
 
 @RestController
@@ -33,10 +47,11 @@ import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
 @Scope("session")
 public class PresentadorPrepararBatalla {
     private Fachada fachada = Fachada.getInstancia();
+    private Random azar = new Random();
 
     @PostMapping("/vistaConectada")
     public Commands vistaConectada() {
-        return Commands.create(tiposBarco());
+        return Commands.create(tiposBarco(), tacticas());
     }
 
     // fachada-getTiposBarco() obtiene los tipos del catalogo.
@@ -47,6 +62,27 @@ public class PresentadorPrepararBatalla {
         return new Command(
                 "tiposBarco",
                 TipoBarcoDto.listaDtos(fachada.getTiposBarco()));
+    }
+
+    private Command tacticas() {
+        List<Tactica> disponibles = new ArrayList<>();
+        disponibles.add(new TacticaSecuencial());
+        disponibles.add(new TacticaEspiral());
+        disponibles.add(new TacticaCazaYAtaque());
+        return new Command("tacticas", TacticaDto.listaTacticaDto(disponibles));
+    }
+
+    private Tactica crearTactica(String nombre) throws BatallaException {
+        if ("Secuencial".equals(nombre)) {
+            return new TacticaSecuencial();
+        }
+        if ("Espiral".equals(nombre)) {
+            return new TacticaEspiral();
+        }
+        if ("Caza y ataque".equals(nombre)) {
+            return new TacticaCazaYAtaque();
+        }
+        throw new BatallaException("Seleccioná una táctica de juego válida.");
     }
 
     private ConfiguracionBatalla crearConfiguracion(PrepararBatallaDto datos) throws BatallaException {
@@ -109,25 +145,44 @@ public class PresentadorPrepararBatalla {
         return comandos;
     }
 
+    // Aca estamos conversando con crearBatalla mas que nada, ahi en Fachada tenemos
+    // crearBatalla que direcciona con el modelo.
     @PostMapping("/prepararBatalla")
-    public Commands prepararBatalla(PrepararBatallaDto prepararBatallaDto) throws BatallaException {
-        ConfiguracionBatalla configuracionBatalla = crearConfiguracion(prepararBatallaDto);
-        return Commands.create(new Command("configuracionValidada", "La configuracion de la flota es valida"));
+    public Commands prepararBatalla(PrepararBatallaDto prepararBatallaDto)
+            throws BatallaException {
+
+        ConfiguracionBatalla configuracion = crearConfiguracion(prepararBatallaDto);
+
+        Tactica tactica = crearTactica(prepararBatallaDto.getNombreTactica());
+
+        Batalla batalla = fachada.crearBatalla(
+                prepararBatallaDto.getLugarBatalla(),
+                configuracion,
+                tactica);
+
+        Commands comandos = abrirPreparacion(batalla.getLugar());
+        comandos.add(new Command("batallaCreada", batalla.getLugar()));
+
+        return comandos;
     }
 
     @PostMapping("/ubicarBarco")
-    public Commands ubicarBarco(UbicarBarcoDto ubicarBarcoDto) throws BatallaException {
-        fachada.ubicarBarco(ubicarBarcoDto.getLugarDeLaBatalla(), ubicarBarcoDto.getIndiceDelBarco(),
-                ubicarBarcoDto.getFila(), ubicarBarcoDto.getColumna(), ubicarBarcoDto.getEsHorizontal());
-        Batalla batalla = fachada.buscarBatalla(ubicarBarcoDto.getLugarDeLaBatalla());
-        Flota flotaHumana = batalla.getJugadorHumano().getOceano().getFlota();
-        Commands comandos = mostrarBarcosUbicados(flotaHumana);
+    public Commands ubicarBarco(UbicarBarcoDto ubicarBarcoDto)
+            throws BatallaException {
+        // le mandamos a la fachada todos los datos del usuario para colocar el barco
+        fachada.ubicarBarco(
+                ubicarBarcoDto.getLugarDeLaBatalla(),
+                ubicarBarcoDto.getIndiceDelBarco(),
+                ubicarBarcoDto.getFila(),
+                ubicarBarcoDto.getColumna(),
+                ubicarBarcoDto.getEsHorizontal());
+        // creamos el comando para el lugar de la batalla
+        Commands comandos = abrirPreparacion(
+                ubicarBarcoDto.getLugarDeLaBatalla());
+        // cuando todo termine, decimos que el barco fue ubicado y lo ponemos con la
+        // llave "barcoUbicado"
         comandos.add(new Command("barcoUbicado", "Barco ubicado!"));
-        comandos.add(barcosPreparacion(flotaHumana));
-        Command estadoFlota = new Command(
-                "flotaUbicada",
-                flotaHumana.estanTodosUbicados());
-        comandos.add(estadoFlota);
+
         return comandos;
     }
 
@@ -138,26 +193,36 @@ public class PresentadorPrepararBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla no existe");
         }
-        // obtenemos la batalla del jugador humano.
-        Oceano oceano = batalla.getJugadorHumano().getOceano();
-        // cuado tenemos el oceano, podemos acceder a la flota
-        Flota flota = oceano.getFlota();
-        Commands comandos = Commands.create();
-        // Ahora creamos comandos, para lugarBatalla.
-        comandos.add(new Command("lugarBatalla", batalla.getLugar()));
-        comandos.add(inicializarTablero(oceano));
-        comandos.add(barcosPreparacion(flota));
-        Commands dibujarBarcos = mostrarBarcosUbicados(flota);
-        // Aca incorporamos las ordenes del dibujo despues de inicializar el tablero.
-        for (Command comando : dibujarBarcos.getCommands()) {
-            comandos.add(comando);
+        // Aplicamos lo que uso el profe para sincronizar, sin esto otra solicitud
+        // podría colocar
+        // un barco entre consultas.
+        synchronized (batalla) {
+            // hay que consultar el estado actual para ver si esta en preparacion
+            if (batalla.getEstado().getEstado() != Batalla.Estados.enPreparacion) {
+                return Commands.create(
+                        new Command("combateIniciado", batalla.getLugar()));
+            }
+            // obtenemos la batalla del jugador humano.
+            Oceano oceano = batalla.getJugadorHumano().getOceano();
+            // cuado tenemos el oceano, podemos acceder a la flota
+            Flota flota = oceano.getFlota();
+            Commands comandos = Commands.create();
+            // Ahora creamos comandos, para lugarBatalla.
+            comandos.add(new Command("lugarBatalla", batalla.getLugar()));
+            comandos.add(inicializarTablero(oceano));
+            comandos.add(barcosPreparacion(flota));
+            Commands dibujarBarcos = mostrarBarcosUbicados(flota);
+            // Aca incorporamos las ordenes del dibujo despues de inicializar el tablero.
+            for (Command comando : dibujarBarcos.getCommands()) {
+                comandos.add(comando);
+            }
+            // aca corroboramos que la flota se haya ubicado
+            Command estadoFlota = new Command(
+                    "flotaUbicada",
+                    flota.estanTodosUbicados());
+            comandos.add(estadoFlota);
+            return comandos;
         }
-        // aca corroboramos que la flota se haya ubicado
-        Command estadoFlota = new Command(
-                "flotaUbicada",
-                flota.estanTodosUbicados());
-        comandos.add(estadoFlota);
-        return comandos;
     }
 
     @PostMapping("/ubicarEnAguasEnemigas")
@@ -168,8 +233,55 @@ public class PresentadorPrepararBatalla {
     @PostMapping("/validarFlotaParaLibrarBatalla")
     public Commands validarFlotaParaLibrarBatalla(String lugarBatalla) throws BatallaException {
         fachada.validarFlotaParaLibrarBatalla(lugarBatalla);
+        fachada.iniciarCombate(lugarBatalla);
         return Commands.create(
-                new Command("flotaListaParaCombatir", "La flota está lista para librar batalla."));
+                new Command("combateIniciado", lugarBatalla));
+    }
+
+    @GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter eventos(String lugarBatalla) throws BatallaException {
+        SseEmitter emisor = new SseEmitter();
+        ObservadorBatalla observador = new ObservadorBatalla() {
+            @Override
+            public void actualizar(EventoBatalla evento) {
+                if (evento.getIdentificadorBatalla().equals(lugarBatalla)) {
+                    try {
+                        emisor.send(
+                                SseEmitter.event()
+                                        .name("actualizacion")
+                                        .data(evento.getTipoCambio()));
+                    } catch (IOException error) {
+                        emisor.completeWithError(error);
+                    }
+                }
+            }
+        };
+        fachada.agregarObservador(lugarBatalla, observador);
+        // Esto que tenemos aca sirve para cuando vence la conexion por tiempo, cerrar
+        // el emisor.
+        // la flechita () -> significa que es una funcion que ocurrira cuando se corra
+        // el evento.
+        emisor.onCompletion(() -> quitarObservador(lugarBatalla, observador));
+
+        emisor.onTimeout(() -> {
+            quitarObservador(lugarBatalla, observador);
+            emisor.complete();
+        });
+
+        emisor.onError(error -> quitarObservador(lugarBatalla, observador));
+        return emisor;
+    }
+
+    // este metodo nos permitira retirar la suscripcion cuando termine la conexion
+    // del emisor (SSE)
+    private void quitarObservador(
+            String lugarBatalla, ObservadorBatalla observador) {
+
+        try {
+            fachada.quitarObservador(lugarBatalla, observador);
+        } catch (BatallaException error) {
+            // Si la batalla ya no existe, no hay una suscripción que conservar.
+        }
     }
 
 }

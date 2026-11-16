@@ -7,6 +7,10 @@ import uy.edu.ort.battleshipdemo.Modelo.Batalla;
 import java.util.List;
 import uy.edu.ort.battleshipdemo.excepciones.TipoBarcoException;
 import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
+import uy.edu.ort.battleshipdemo.Modelo.Ronda;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.ObservadorBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.ConfiguracionBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.Tactica.Tactica;
 
 public class Fachada {
     private static Fachada instancia;
@@ -63,5 +67,46 @@ public class Fachada {
     public double calcularPorcentajeExito() {
         return sistemaBatallas.calcularPorcentajeExito();
     }
+    // aca le mandamos a SistemaBatalla linea 215, los parametros que seran leidos desde el presentador
+    public Batalla crearBatalla(
+            String lugar,
+            ConfiguracionBatalla configuracion,
+            Tactica tactica) throws BatallaException {
 
+        return sistemaBatallas.crearBatalla(lugar, configuracion, tactica);
+    }
+
+    public void iniciarCombate(String lugarBatalla) throws BatallaException {
+        sistemaBatallas.iniciarCombate(lugarBatalla);
+    }
+
+    public Ronda jugarRonda(
+            String lugarBatalla, int fila, int columna, int numeroRondaEsperada)
+            throws BatallaException {
+
+        return sistemaBatallas.jugarRonda(
+                lugarBatalla, fila, columna, numeroRondaEsperada);
+    }
+
+    public void agregarObservador(
+            String lugarBatalla, ObservadorBatalla observador)
+            throws BatallaException {
+
+        sistemaBatallas.agregarObservador(lugarBatalla, observador);
+    }
+
+    public void quitarObservador(
+            String lugarBatalla, ObservadorBatalla observador)
+            throws BatallaException {
+
+        sistemaBatallas.quitarObservador(lugarBatalla, observador);
+    }
+
+    public void agregarObservadorSala(ObservadorBatalla observador) {
+        sistemaBatallas.agregarObservadorSala(observador);
+    }
+
+    public void quitarObservadorSala(ObservadorBatalla observador) {
+        sistemaBatallas.quitarObservadorSala(observador);
+    }
 }
