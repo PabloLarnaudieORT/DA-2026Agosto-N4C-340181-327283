@@ -32,4 +32,6 @@ public class BatallaDto {
     public List<Integer> getBajasEnemigas() {
         return bajasEnemigas;
     }
+
+    
 }
