@@ -4,6 +4,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.context.annotation.Scope;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import uy.edu.ort.battleshipdemo.Commands;
 import uy.edu.ort.battleshipdemo.Command;
 import uy.edu.ort.battleshipdemo.InicializarDto;
@@ -12,6 +15,7 @@ import uy.edu.ort.battleshipdemo.ValorDto;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
+import java.io.IOException;
 
 import uy.edu.ort.battleshipdemo.DTOs.TipoBarcoDto;
 import uy.edu.ort.battleshipdemo.DTOs.TacticaDto;
@@ -34,6 +38,8 @@ import uy.edu.ort.battleshipdemo.Modelo.Tactica.Tactica;
 import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaSecuencial;
 import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaEspiral;
 import uy.edu.ort.battleshipdemo.Modelo.Tactica.TacticaCazaYAtaque;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.EventoBatalla;
+import uy.edu.ort.battleshipdemo.Modelo.Eventos.ObservadorBatalla;
 import uy.edu.ort.battleshipdemo.excepciones.BatallaException;
 
 @RestController
@@ -216,6 +222,13 @@ public class PresentadorPrepararBatalla {
         fachada.iniciarCombate(lugarBatalla);
         return Commands.create(
                 new Command("combateIniciado", lugarBatalla));
+    }
+
+    @GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter eventos(String lugarBatalla) throws BatallaException {
+        SseEmitter emisor = new SseEmitter();
+
+        return emisor;
     }
 
 }
