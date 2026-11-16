@@ -237,7 +237,7 @@ public class SistemaBatallas implements ObservadorBatalla {
         batalla.setJugadorHumano(humano);
         // luego el jugador maquina
         JugadorMaquina maquina = new JugadorMaquina("Máquina", tactica);
-        maquina.setOceano(configuracion.crearOceano());
+        maquina.setOceano(crearOceanoMaquina(configuracion));
         batalla.setJugadorMaquina(maquina);
         // luego agregamos la batalla.
         agregarBatalla(batalla);
@@ -266,6 +266,7 @@ public class SistemaBatallas implements ObservadorBatalla {
     }
 
     private boolean ubicarBarcoAleatoriamente(Oceano oceano, Barco barco) {
+        Random azar = new Random();
         int cantidadIntentos = oceano.getFilas() * oceano.getColumnas() * 2;
 
         for (int intento = 0; intento < cantidadIntentos; intento++) {
