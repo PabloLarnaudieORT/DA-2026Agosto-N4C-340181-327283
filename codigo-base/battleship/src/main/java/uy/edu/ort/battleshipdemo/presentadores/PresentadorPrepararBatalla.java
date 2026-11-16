@@ -138,7 +138,9 @@ public class PresentadorPrepararBatalla {
         }
         return comandos;
     }
-    //Aca estamos conversando con crearBatalla mas que nada, ahi en Fachada tenemos crearBatalla que direcciona con el modelo.
+
+    // Aca estamos conversando con crearBatalla mas que nada, ahi en Fachada tenemos
+    // crearBatalla que direcciona con el modelo.
     @PostMapping("/prepararBatalla")
     public Commands prepararBatalla(PrepararBatallaDto prepararBatallaDto)
             throws BatallaException {
@@ -211,8 +213,9 @@ public class PresentadorPrepararBatalla {
     @PostMapping("/validarFlotaParaLibrarBatalla")
     public Commands validarFlotaParaLibrarBatalla(String lugarBatalla) throws BatallaException {
         fachada.validarFlotaParaLibrarBatalla(lugarBatalla);
+        fachada.iniciarCombate(lugarBatalla);
         return Commands.create(
-                new Command("flotaListaParaCombatir", "La flota está lista para librar batalla."));
+                new Command("combateIniciado", lugarBatalla));
     }
 
 }
