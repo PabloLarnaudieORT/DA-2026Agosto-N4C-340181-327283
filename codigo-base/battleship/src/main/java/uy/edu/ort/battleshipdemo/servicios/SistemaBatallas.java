@@ -59,17 +59,19 @@ public class SistemaBatallas implements ObservadorBatalla {
             throw new BatallaException("La batalla no puede ser nula");
         }
         String nombreLugar = batalla.getLugar();
-        // Probando, me di cuenta que faltaba un trim()
-        if (nombreLugar == null || nombreLugar.trim().isEmpty()) {
-            // debido a que no puede ser vacio el nombre, vamos a poner generarLugar
-            nombreLugar = generarLugar();
-            batalla.setLugar(nombreLugar);
+        synchronized (batallas) {
+            // Probando, me di cuenta que faltaba un trim()
+            if (nombreLugar == null || nombreLugar.trim().isEmpty()) {
+                // debido a que no puede ser vacio el nombre, vamos a poner generarLugar
+                nombreLugar = generarLugar();
+                batalla.setLugar(nombreLugar);
+            }
+            if (buscarBatalla(nombreLugar) != null) {
+                throw new BatallaException("No se puede librar más de una batalla en el mismo lugar, cambie de nombre");
+            }
+            this.batallas.add(batalla);
+            batalla.agregarObservador(this);
         }
-        if (buscarBatalla(nombreLugar) != null) {
-            throw new BatallaException("No se puede librar más de una batalla en el mismo lugar, cambie de nombre");
-        }
-        this.batallas.add(batalla);
-        batalla.agregarObservador(this);
         actualizar(new EventoBatalla(nombreLugar, "BATALLA_AGREGADA"));
     }
 
@@ -78,13 +80,15 @@ public class SistemaBatallas implements ObservadorBatalla {
     }
 
     public Batalla buscarBatalla(String nombreLugar) {
-        for (Batalla batalla : batallas) {
-            if (batalla.getLugar().equals(nombreLugar)) {
-                return batalla;
+        synchronized (batalla) {
+            for (Batalla batalla : batallas) {
+                if (batalla.getLugar().equals(nombreLugar)) {
+                    return batalla;
+                }
             }
+            // no devuelvo excepcion, por que si el lugar esta disponible
+            // no puedo tirar una excepcion batalla...
         }
-        // no devuelvo excepcion, por que si el lugar esta disponible
-        // no puedo tirar una excepcion batalla...
         return null;
     }
 

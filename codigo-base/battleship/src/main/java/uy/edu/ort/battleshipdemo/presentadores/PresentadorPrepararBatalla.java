@@ -167,18 +167,22 @@ public class PresentadorPrepararBatalla {
     }
 
     @PostMapping("/ubicarBarco")
-    public Commands ubicarBarco(UbicarBarcoDto ubicarBarcoDto) throws BatallaException {
-        fachada.ubicarBarco(ubicarBarcoDto.getLugarDeLaBatalla(), ubicarBarcoDto.getIndiceDelBarco(),
-                ubicarBarcoDto.getFila(), ubicarBarcoDto.getColumna(), ubicarBarcoDto.getEsHorizontal());
-        Batalla batalla = fachada.buscarBatalla(ubicarBarcoDto.getLugarDeLaBatalla());
-        Flota flotaHumana = batalla.getJugadorHumano().getOceano().getFlota();
-        Commands comandos = mostrarBarcosUbicados(flotaHumana);
+    public Commands ubicarBarco(UbicarBarcoDto ubicarBarcoDto)
+            throws BatallaException {
+        // le mandamos a la fachada todos los datos del usuario para colocar el barco
+        fachada.ubicarBarco(
+                ubicarBarcoDto.getLugarDeLaBatalla(),
+                ubicarBarcoDto.getIndiceDelBarco(),
+                ubicarBarcoDto.getFila(),
+                ubicarBarcoDto.getColumna(),
+                ubicarBarcoDto.getEsHorizontal());
+        // creamos el comando para el lugar de la batalla
+        Commands comandos = abrirPreparacion(
+                ubicarBarcoDto.getLugarDeLaBatalla());
+        // cuando todo termine, decimos que el barco fue ubicado y lo ponemos con la
+        // llave "barcoUbicado"
         comandos.add(new Command("barcoUbicado", "Barco ubicado!"));
-        comandos.add(barcosPreparacion(flotaHumana));
-        Command estadoFlota = new Command(
-                "flotaUbicada",
-                flotaHumana.estanTodosUbicados());
-        comandos.add(estadoFlota);
+
         return comandos;
     }
 
@@ -189,7 +193,8 @@ public class PresentadorPrepararBatalla {
         if (batalla == null) {
             throw new BatallaException("La batalla no existe");
         }
-        // Aplicamos lo que uso el profe para sincronizar, sin esto otra solicitud podría colocar
+        // Aplicamos lo que uso el profe para sincronizar, sin esto otra solicitud
+        // podría colocar
         // un barco entre consultas.
         synchronized (batalla) {
             // hay que consultar el estado actual para ver si esta en preparacion
